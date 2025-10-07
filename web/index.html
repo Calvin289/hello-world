@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>个税计算器</title>
+    <style>
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        margin: 0;
+        padding: 2rem;
+        background-color: #f7f7f7;
+        color: #333;
+      }
+      h1 {
+        text-align: center;
+      }
+      form {
+        max-width: 480px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: grid;
+        gap: 1rem;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        font-weight: bold;
+        gap: 0.5rem;
+      }
+      input[type="number"] {
+        padding: 0.6rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        padding: 0.75rem 1rem;
+        border: none;
+        border-radius: 4px;
+        background-color: #0078d4;
+        color: #fff;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #005ea2;
+      }
+      .result {
+        max-width: 480px;
+        margin: 1.5rem auto 0;
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      .result h2 {
+        margin-top: 0;
+      }
+      .result dl {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+      }
+      .result dt {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>综合所得个税计算器</h1>
+    <form id="tax-form">
+      <label>
+        收入金额
+        <input
+          type="number"
+          name="income"
+          id="income"
+          min="0"
+          step="0.01"
+          required
+          placeholder="请输入收入金额"
+        />
+      </label>
+      <label>
+        是否按月计算
+        <input type="checkbox" name="monthly" id="monthly" />
+      </label>
+      <label>
+        五险一金
+        <input
+          type="number"
+          name="social-insurance"
+          id="social-insurance"
+          min="0"
+          step="0.01"
+          value="0"
+        />
+      </label>
+      <label>
+        专项附加扣除
+        <input
+          type="number"
+          name="deductions"
+          id="deductions"
+          min="0"
+          step="0.01"
+          value="0"
+        />
+      </label>
+      <button type="submit">开始计算</button>
+    </form>
+    <section class="result" id="result" hidden>
+      <h2>计算结果</h2>
+      <dl>
+        <dt>应纳税所得额</dt>
+        <dd id="taxable-income"></dd>
+        <dt>适用税率</dt>
+        <dd id="tax-rate"></dd>
+        <dt>速算扣除数</dt>
+        <dd id="quick-deduction"></dd>
+        <dt>应缴税额</dt>
+        <dd id="tax-amount"></dd>
+        <dt>税后收入</dt>
+        <dd id="after-tax-income"></dd>
+      </dl>
+    </section>
+    <script>
+      function calculateTax({ income, monthly, socialInsurance, deductions }) {
+        const taxableIncome = Math.max(0, income - socialInsurance - deductions - 60000);
+        const taxBrackets = [
+          { threshold: 36000, rate: 0.03, quickDeduction: 0 },
+          { threshold: 144000, rate: 0.1, quickDeduction: 2520 },
+          { threshold: 300000, rate: 0.2, quickDeduction: 16920 },
+          { threshold: 420000, rate: 0.25, quickDeduction: 31920 },
+          { threshold: 660000, rate: 0.3, quickDeduction: 52920 },
+          { threshold: 960000, rate: 0.35, quickDeduction: 85920 },
+          { threshold: Infinity, rate: 0.45, quickDeduction: 181920 },
+        ];
+
+        const bracket = taxBrackets.find((item) => taxableIncome <= item.threshold);
+        const taxAmount = taxableIncome * bracket.rate - bracket.quickDeduction;
+        const afterTaxIncome = income - taxAmount;
+
+        return {
+          taxableIncome,
+          taxRate: bracket.rate,
+          quickDeduction: bracket.quickDeduction,
+          taxAmount,
+          afterTaxIncome,
+        };
+      }
+
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("zh-CN", {
+          style: "currency",
+          currency: "CNY",
+          minimumFractionDigits: 2,
+        }).format(value);
+      }
+
+      document.getElementById("tax-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const income = Number(document.getElementById("income").value || 0);
+        const monthly = document.getElementById("monthly").checked;
+        const socialInsurance = Number(
+          document.getElementById("social-insurance").value || 0
+        );
+        const deductions = Number(document.getElementById("deductions").value || 0);
+
+        const normalizedIncome = monthly ? income * 12 : income;
+        const normalizedSocialInsurance = monthly ? socialInsurance * 12 : socialInsurance;
+        const normalizedDeductions = deductions; // 已按年度输入
+
+        const result = calculateTax({
+          income: normalizedIncome,
+          monthly,
+          socialInsurance: normalizedSocialInsurance,
+          deductions: normalizedDeductions,
+        });
+
+        document.getElementById("taxable-income").textContent = formatCurrency(
+          result.taxableIncome
+        );
+        document.getElementById("tax-rate").textContent = `${(result.taxRate * 100).toFixed(1)}%`;
+        document.getElementById("quick-deduction").textContent = formatCurrency(
+          result.quickDeduction
+        );
+        document.getElementById("tax-amount").textContent = formatCurrency(result.taxAmount);
+        document.getElementById("after-tax-income").textContent = formatCurrency(
+          monthly ? result.afterTaxIncome / 12 : result.afterTaxIncome
+        );
+
+        document.getElementById("result").hidden = false;
+      });
+    </script>
+  </body>
+</html>
