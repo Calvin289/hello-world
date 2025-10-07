@@ -25,3 +25,21 @@ I know python a litter,I‘ve had tacos on the moon and find them far super to E
 - `--deductions`：除社会保险外的其他年度专项附加扣除。
 
 脚本会自动按照 2019 年实施的综合所得个税税率表计算税额，并给出应纳税所得额、速算扣除数和税后收入。
+
+## 如何测试运行效果
+
+1. **直接运行命令行脚本**：
+
+   ```bash
+   python tax_calculator.py --income 120000
+   ```
+
+   命令会立即在终端输出各项计算细节（如应税所得、适用税率和税后收入），可直观看到个税计算的结果。
+
+2. **运行单元测试验证逻辑**：
+
+   ```bash
+   python -m unittest discover -s tests
+   ```
+
+   该命令会执行位于 `tests/` 目录下的测试用例，覆盖常见收入、扣除场景以及异常输入，帮助确认核心计算逻辑的正确性。
